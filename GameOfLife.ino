@@ -9,6 +9,8 @@
 #define DELAYTIME 500       // Time between each generation
 #define LIFE_COLOR white    // Colow of alive pixels
 #define MAX_GENERATIONS 50  // Max number of generations to run for
+#define SHOW_STATES 1       // Show intermediate states
+#define DEBUG_PRINTS 0      // Enable debug prints
 
 /* Create matrix object. The 4th param defines the first pixel and the orientation of
    the pixels on the matrix. Refer to Adafruit documentation for details.
@@ -31,19 +33,29 @@ uint32_t white = matrix.Color(255, 255, 255);
 bool game_map_1[WIDTH][HEIGHT];
 bool game_map_2[WIDTH][HEIGHT];
 
+#if SHOW_STATES
+// Array to store colors of next generation of cells
+uint32_t pixel_colors[WIDTH][HEIGHT];
+#endif
+
 // To track elapsed generations for resetting after a fixed time
 int generation = 0;
+bool restart = false;
 
 // Setup code. Runs once on power up
 void setup()
 {
+#if DEBUG_PRINTS
   // Serial logs for debugging
   Serial.begin(9600);
+#endif
   matrix.begin();
   matrix.setBrightness(BRIGHTNESS);
   matrix.fillScreen(red);
   matrix.show();
+#if DEBUG_PRINTS
   Serial.println("Blank screen");
+#endif
   delay(DELAYTIME);
   randomSeed(analogRead(0)); // Use an analog pin as a seed for randomness
 
@@ -52,13 +64,19 @@ void setup()
     for (int y = 0; y < HEIGHT; y++)
     {
       game_map_1[x][y] = random(2); // Assign either 0 or 1 randomly
+    #if DEBUG_PRINTS
       Serial.print(game_map_1[x][y]); // Print the initial matrix to serial
+    #endif
     }
+  #if DEBUG_PRINTS
     Serial.println();
+  #endif
   }
   update_matrix();
   delay(DELAYTIME);
+#if DEBUG_PRINTS
   Serial.println("Setup done");
+#endif
 }
 
 // Loop code. Runs endlessly
@@ -98,16 +116,28 @@ void calculate_next_map()
       if (game_map_1[x][y] && (neighbors < 2 || neighbors > 3))
       {
         game_map_2[x][y] = 0;
+
+      #if SHOW_STATES
+        pixel_colors[x][y] = red; // Mark newly dead pixels
+      #endif
       }
       // If cell was dead and has exactly 3 neighbors, it comes alive
       else if (!game_map_1[x][y] && neighbors == 3)
       {
         game_map_2[x][y] = 1;
+
+      #if SHOW_STATES
+        pixel_colors[x][y] = green; // Mark newly alive pixels
+      #endif
       }
       // All other cells remain the same
       else
       {
         game_map_2[x][y] = game_map_1[x][y];
+
+      #if SHOW_STATES
+        pixel_colors[x][y] = white; // Mark continuing pixels
+      #endif
       }
     }
   }
@@ -159,6 +189,33 @@ void copy_map()
 // Send the new state to the NeoPixels and show them
 void update_matrix()
 {
+  // If it's a restart, avoid showing intermediate state
+  if (!restart)
+  {
+#if SHOW_STATES
+  for (int x = 0; x < WIDTH; ++x)
+  {
+    for (int y = 0; y < HEIGHT; ++y)
+    {
+      if(game_map_1[x][y])
+      {
+        matrix.drawPixel(x,y,pixel_colors[x][y]);
+      }
+      else if (pixel_colors[x][y] == red)
+      {
+        matrix.drawPixel(x,y,pixel_colors[x][y]);
+      }
+      else
+      {
+        matrix.drawPixel(x, y, 0);
+      }
+    }
+  }
+  matrix.show();
+  delay(DELAYTIME);
+#endif
+  }
+
   for (int x = 0; x < WIDTH; ++x)
   {
     for (int y = 0; y < HEIGHT; ++y)
@@ -179,7 +236,8 @@ void update_matrix()
 // Reset the states randomly and restart
 void restart_game()
 {
-  if (generation == 50)
+  restart = true;
+  if (generation == MAX_GENERATIONS)
   {
     matrix.fillScreen(green);
   }
@@ -190,8 +248,6 @@ void restart_game()
   matrix.show();
   delay(DELAYTIME);
 
-  randomSeed(analogRead(0)); // Use an analog pin as a seed for randomness
-
   for (int x = 0; x < WIDTH; x++)
   {
     for (int y = 0; y < HEIGHT; y++)
@@ -201,6 +257,7 @@ void restart_game()
   }
   update_matrix();
   delay(DELAYTIME);
+  restart = false;
 }
 
 // Check if all cells are dead
