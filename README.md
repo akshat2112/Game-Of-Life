@@ -23,10 +23,11 @@ Tested on Arduino Nano with an 8x8 matrix.
 - If the simulation ends because all cells are dead, the matrix flashes red
 - If the simulation ends because it has reached the max number of iterations, the matrix flashes green
 - The new start state is again decided randomly
+- Option to show an intermediate state where dying cells are red and new cells are green
 
 ## Further planned enhancements
 - Method to show intermediate states
-  - Show an intermediate state where dying cells are red and new cells are green
+  - ~~Show an intermediate state where dying cells are red and new cells are green~~ --> *Added on 27th April 2023*
   - Fade the new/dying cells
 - Add buttons/knob to control brightness
 - Add buttons/knob to control speed of next generation
